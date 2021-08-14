@@ -1,7 +1,7 @@
-"","explore","discover_reveal","battle","strategy_tactics","attack","defeat","death","dangerous","survive","explode_blast","shoot","destroy_devastate_wreck"
-"516508",1,1,0,0,0,0,0,0,0,0,0,0
-"927725",0,0,1,1,0,0,0,0,0,0,0,0
-"928233",0,0,0,0,1,1,0,0,0,0,0,0
-"930740",0,0,0,0,0,0,1,1,1,0,0,0
-"930847",0,0,0,0,0,0,0,0,1,1,1,0
-"930851",0,0,0,0,0,0,0,0,0,0,1,1
+"","explore","discover_reveal","battle","strategy_tactics","attack","defeat","dangerous","shoot","destroy_devastate_wreck"
+"516508",1,1,0,0,0,0,0,0,0
+"927725",0,0,1,1,0,0,0,0,0
+"928233",0,0,0,0,1,1,0,0,0
+"930740",0,0,0,0,0,0,1,0,0
+"930847",0,0,0,0,0,0,0,1,0
+"930851",0,0,0,0,0,0,0,1,1

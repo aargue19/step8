@@ -1,7 +1,7 @@
-"","defend","combat","mission","treasure","cooperate","compete","trap","collect_gather","agile_athletic","progress_advance","strategy_tactics","encounter","discover_reveal","explore","adventure","hack_and_slash","battle","burn_ignite","quest","fight","defeat","earn","rescue","grow"
+"","combat","mission","defend","treasure","cooperate","compete","trap","collect_gather","agile_athletic","progress_advance","encounter","strategy_tactics","discover_reveal","explore","adventure","battle","hack_and_slash","burn_ignite","quest","fight","defeat","earn","rescue","grow"
 "605452",1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 "605803",0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-"606312",0,1,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0
+"606312",1,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0
 "615804",0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0
 "618630",0,0,0,1,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0
 "629692",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0

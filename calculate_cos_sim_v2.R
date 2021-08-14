@@ -1,278 +1,501 @@
-# rm(list=ls())
-# setwd("C:/Users/gaoan/Desktop/step8/subset_wordtype_all_pct_full_mc_allscore")
-setwd(sprintf("C:/Users/gaoan/Desktop/step8/subset_%s", current_dir))
+# USE THIS TO CALCULATE ALL COS SIMS BASED ON PROTOTYPES USING 1 AND 2 YEARS
+setwd("C:/Users/gaoan/Desktop/step8/matrices")
+
+library(dplyr)
+library(lsa)
 
 '%!in%' <- Negate('%in%')
 
-list_of_all_gameids = all_ids
+word_type_options = c("wordtype_all", "wordtype_wm", "wordtype_world",
+                      "wordtype_mech")
+word_freq_options = c("pct_full", "pct_99p", "pct_95p")
+avg_score_options = c("mc_allscore", "mc_90score", "mc_75score")
 
-list_of_genres = c("action adventure","action","role-playing","puzzle",
-                   "racing","miscellaneous","simulation","adventure",
-                   "sports","strategy")
+wide_genre_options = unique(df$genre_wide)
+wide_genre_options = sub(" ", "_", wide_genre_options)                          #"action adventure" -> "action_adventure"
 
-# list_of_genres = c("action")
+year_options = as.numeric(unique(df$release_year))                            
+year_options = sort(year_options)[3:length(year_options)]                       # EXCLUDE 2005/2006 b/c no prototypes 
 
-list_of_years = rev(as.numeric(c("2005","2006","2007","2008","2009","2010","2011","2012","2013","2014")))
 
-final_cos_sim_df = data.frame()
+for(type in word_type_options){
+  for(freq in word_freq_options){
+    for(score in avg_score_options){
+      
+      tfs_df = data.frame()
 
-###### ADD FOR LOOP HERE TO GO THROUGH GENRES 1 BY 1
-for(current_genre in list_of_genres){
-  
-  ################################################################################
-  # CREATE DF OF SIMILARITY SCORES FOR ALL GAME IN SUBSET BASED ON PREV. 1 YEAR PROTOTYPE
-  
-  full_cos_sim_df = data.frame()
-  
-  for (year in list_of_years[1:(length(list_of_years)-1)]){
-    
-    # CHECK IF CURRENT YEAR OR PREVIOUS YEAR IS EMPTY
-    
-    if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) > 4 &
-       file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) > 4){
-    
-      print(sprintf("calculating 1yr: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
-      
-      
-      # CURRENTLY YOURE CALCULATING THE SCORES FOR ONLY THE SAME GAMES AS THE PROTOTYPE
-      # PROTOTYPE IS BASED ON PARTICULAR COMBO OF: genre/yr/wordtype/frequency/score
-      # BUT THEN YOU NEED TO CALCULATE COS SIM FOR ALL GAMES FOR EACH genre/yr/wordtype COMBOS, DESPITE THEIR frequency/score
-      
-      
-      
-      df1 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))              
-      df2 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1))
-      
-      # print(sprintf("df1: %s obs.",nrow(df1)))
-      
-      #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
-      colnames(df1)[1] = "id"
-      df1$id = as.character(df1$id)
-      
-      colnames(df2)[1] = "id"
-      df2$id = as.character(df2$id)
-      
-      ################################################################################
-      # CALCULATE AVERAGES FOR PROTOTYPE
-      df2 = rbind(df2, c("Total",colSums(df2[,2:ncol(df2)])))
-      
-      library(dplyr)
-      df2[,2:ncol(df2)] <- mutate_all(df2[,2:ncol(df2)], function(x) as.numeric(as.character(x)))
-      
-      df2 = rbind(df2, c("avg", colSums(df2[,2:ncol(df2)]) / (nrow(df2) - 1)))                    # IS THIS RIGHT????
-      
-      df2 = df2[-c(nrow(df2)-1),]
-      
-      rownames(df2) <- NULL
-      
-      # df1 = rbind(df1, as.data.frame(df2[nrow(df2),1:ncol(df2)]))
-      
-      #####################################################
-      # CALCULATE COSINE SIMILARITY
-      
-      library(lsa)
-      
-      rownames(df1) = df1$id
-      
-      prototype = as.numeric(df2[nrow(df2), 2:ncol(df2)])
-      
-      cosine_vals = vector()
-      
-      for(i in 1:nrow(df1)){
-        # print(i)
-        v1 = as.numeric(df1[i,2:ncol(df1)])
-        c_mat = cosine(v1, prototype)
-        cosine_vals = c(cosine_vals, (c_mat[1]))
+      for(genre in wide_genre_options){
+        for(year in year_options){
+          
+          print(paste(type,freq,score,genre,year, sep="_"))
+          
+          current_cos_sim_df = data.frame()
+                                                                            
+          # IF EITHER CURRENT OR PREVIOUS YEAR IS EMPTY FILL WITH NA
+          
+          f4 = paste0(paste(type,"pct_full_mc_allscore", 
+                            genre, year, sep = "_"), ".csv")
+          
+          all_df = read.csv(f4)
+          
+          f1 = paste0(paste(type,freq,score,genre,year-1, sep="_"), ".csv")
+          f2 = paste0(paste(type,freq,score,genre,year-2, sep="_"), ".csv")
+          
+          if(file.size(f1) <= 4 | file.size(f2) <= 4){
+
+            current_cos_sim_df = data.frame(id = all_df$X, cos_sim_1yr = NA, cos_sim_2yr = NA)
+
+          }
+          
+          if(file.size(f1) > 4 &                                                #USING & MEANS YOU WONT GET 1 yr for 2006 games
+             file.size(f2) > 4){
+            
+            #CALCULATE VECTOR FOR 1YR PROTOTYPE
+            
+            f = paste0(paste(type,freq,score,genre,year-1, sep="_"), ".csv")
+            proto_df = read.csv(f)
+            rownames(proto_df) = proto_df$X                                     #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
+            proto_df = subset(proto_df, select = -X)
+            proto_avgs_1yr = colSums(proto_df) / nrow(proto_df)
+            
+            #CALCULATE VECTOR FOR 2YRS PROTOTYPE
+            
+            f1 = paste0(paste(type,freq,score,genre,year-1, sep="_"), ".csv")
+            f2 = paste0(paste(type,freq,score,genre,year-2, sep="_"), ".csv")
+            
+            proto_df1 = read.csv(f1)                                            # REMEMBER CHECK FOR EMPTY FILES
+            proto_df2 = read.csv(f2)
+            
+            proto_df_combo = bind_rows(proto_df1, proto_df2)                    # DFS CONTAIN DIFFERENT ROWS AND COLUMNS
+            proto_df_combo[is.na(proto_df_combo)] <- 0
+            
+            rownames(proto_df_combo) = proto_df_combo$X
+            proto_df_combo = subset(proto_df_combo, select = -X)
+            proto_avgs_2yr = colSums(proto_df_combo) / nrow(proto_df_combo)
+            
+            #DF OF ALL GENRES ALL YEARS FOR current (type/freq/score) COMBO
+            
+            f4 = paste0(paste(type,"pct_full_mc_allscore", 
+                              genre, year, sep = "_"), ".csv")
+
+            
+            #CREATE TWO DFS WITH SAME COLUMNS FOR 1yr SCORES
+            
+            all_df = read.csv(f4)
+            rownames(all_df) = all_df$X                                         #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
+            all_df = subset(all_df, select = -X)
+            
+            proto_avgs_1yr_df = as.data.frame(t(proto_avgs_1yr))
+            colnames_to_add = colnames(all_df)[colnames(all_df) %!in% names(proto_avgs_1yr)]
+            proto_avgs_1yr_df[colnames_to_add] = 0
+            proto_avgs_1yr_df = proto_avgs_1yr_df[ , order(names(proto_avgs_1yr_df))]
+            
+            colnames_to_add = names(proto_avgs_1yr)[names(proto_avgs_1yr) %!in% colnames(all_df)]
+            all_df[colnames_to_add] = 0
+            all_df = all_df[ , order(names(all_df))]
+            
+            #FOR EACH ROW IN ALL_DF CALCULATE 1yr COS SIM TO PROTOTYPE
+            
+            cosine_1yr_vals = vector()
+            cosine_2yr_vals = vector()
+            
+            for(r in 1:nrow(all_df)){
+              
+              v1 = as.numeric(c(t(all_df[r,])))
+              v2 = as.numeric(c(t(proto_avgs_1yr_df[1,])))
+              cos_sim_mat = cosine(v1, v2)
+              
+              cosine_1yr_vals = c(cosine_1yr_vals, (cos_sim_mat[1]))
+              
+            }
+            
+            #CREATE TWO DFS WITH SAME COLUMNS FOR 1yr SCORES
+            
+            all_df = read.csv(f4)
+            rownames(all_df) = all_df$X                                         #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
+            all_df = subset(all_df, select = -X)
+            
+            proto_avgs_2yr_df = as.data.frame(t(proto_avgs_2yr))
+            colnames_to_add = colnames(all_df)[colnames(all_df) %!in% names(proto_avgs_2yr)]
+            proto_avgs_2yr_df[colnames_to_add] = 0
+            proto_avgs_2yr_df = proto_avgs_2yr_df[ , order(names(proto_avgs_2yr_df))]
+            
+            colnames_to_add = names(proto_avgs_2yr)[names(proto_avgs_2yr) %!in% colnames(all_df)]
+            all_df[colnames_to_add] = 0
+            all_df = all_df[ , order(names(all_df))]
+            
+            #FOR EACH ROW IN ALL_DF CALCULATE 1yr COS SIM TO PROTOTYPE
+            
+            for(r in 1:nrow(all_df)){
+              
+              v1 = as.numeric(c(t(all_df[r,])))
+              v2 = as.numeric(c(t(proto_avgs_2yr_df[1,])))
+              cos_sim_mat = cosine(v1, v2)
+              
+              cosine_2yr_vals = c(cosine_2yr_vals, (cos_sim_mat[1]))
+              
+            }          
+            
+            current_cos_sim_df = data.frame(id = rownames(all_df),
+                                            cos_sim_1yr = cosine_1yr_vals,
+                                            cos_sim_2yr = cosine_2yr_vals)
+          }                                                                     #END OF IF STATEMENT
+          
+          tfs_df = rbind(tfs_df, current_cos_sim_df)
+          print(nrow(tfs_df))
+        }
       }
       
-      current_cos_sim_df = data.frame(year = year, id = df1$id, cos_sim = cosine_vals)
-    
-      # missing_ids_df = data.frame()                                              #DONT NEED THIS ANYMORE
-      # 
-      # list_of_all_gameids[1] %!in% df1$id
-      #   
-      # for(gameid in list_of_all_gameids){
-      #   if(gameid %!in% df1$id){
-      #     missing_ids_df = rbind(missing_ids_df, data.frame(year = year, id = gameid, cos_sim = NA))
-      #   }
-      # }
-      # 
-      # current_cos_sim_df = rbind(current_cos_sim_df, missing_ids_df)
-    
-      print(sprintf("appending: %s obs.",nrow(current_cos_sim_df)))
+      write.csv(tfs_df, paste0("C:/Users/gaoan/Desktop/step8/cos_sim/", paste(type,freq,score, sep="_"), ".csv"), row.names = F)
+      
       
     }
-  
-    # IF EITHER THE CURRENT YEAR OR THE PREVIOUS YEAR IS EMPTY DO THIS
-    
-    if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) <= 4 |
-       file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) <= 4){
-    
-      print(sprintf("empty: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
-      
-      current_cos_sim_df = data.frame(year = year, id = 999999, cos_sim = NA)
-  
-    }
-  
-    
-    full_cos_sim_df = rbind(full_cos_sim_df, current_cos_sim_df)
-
-  }
-  
-  full_cos_sim_df_1yr = full_cos_sim_df
-  # write.csv(full_cos_sim_df_1yr, "simlilarities_1yr_action_adventure_wordtype_all_pct_full_mc_allscore.csv", row.names = F)
-  
-  
-  ################################################################################
-  
-  ################################################################################
-  # CREATE DF OF SIMILARITY SCORES FOR ALL GAME IN SUBSET BASED ON PREV. 2 YEARs PROTOTYPE
-  
-  full_cos_sim_df = data.frame()
-  
-
-  
-  for (year in list_of_years[1:(length(list_of_years)-2)]){
-    
-    # CHECK IF CURRENT YEAR OR EITHER OF 2 PREVIOUS YEARs ARE EMPTY
-    
-    if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) > 4 &
-       file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) > 4 &
-       file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-2)) > 4){
-      
-      print(sprintf("calculating 2yrs: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
-      
-      df1 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
-      
-      print(sprintf("df1: %s obs.",nrow(df1)))
-      
-      yr_minus_1 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1))
-      yr_minus_2 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-2))
-       
-      df2 = rbind(yr_minus_1, yr_minus_2)
-      # df2 = df2[!duplicated(df2),]
-      
-      #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
-      colnames(df1)[1] = "id"
-      df1$id = as.character(df1$id)
-      
-      colnames(df2)[1] = "id"
-      df2$id = as.character(df2$id)
-      
-      ################################################################################
-      # CALCULATE AVERAGES FOR PROTOTYPE
-      
-      df2 = rbind(df2, c("Total",colSums(df2[,2:ncol(df2)])))
-      
-      library(dplyr)
-      df2[,2:ncol(df2)] <- mutate_all(df2[,2:ncol(df2)], function(x) as.numeric(as.character(x)))
-      
-      df2 = rbind(df2, c("avg", colSums(df2[,2:ncol(df2)]) / (nrow(df2) - 1)))                    # IS THIS RIGHT????
-      
-      df2 = df2[-c(nrow(df2)-1),]
-      
-      rownames(df2) <- NULL
-      
-      # df1 = rbind(df1, as.data.frame(df2[nrow(df2),1:ncol(df2)]))
-      
-      #####################################################
-      # CALCULATE COSINE SIMILARITY
-      
-      library(lsa)
-      
-      rownames(df1) = df1$id
-      
-      prototype = as.numeric(df2[nrow(df2), 2:ncol(df2)])
-      
-      cosine_vals = vector()                                                    # length(prototype)
-      
-      for(i in 1:nrow(df1)){
-        # print(i)
-        v1 = as.numeric(df1[i,2:ncol(df1)])    
-        c_mat = cosine(v1, prototype)                                            #   length(v1)
-        cosine_vals = c(cosine_vals, (c_mat[1]))
-      }
-      
-      current_cos_sim_df = data.frame(year = year, id = df1$id, cos_sim = cosine_vals)
-      
-      # missing_ids_df = data.frame()                                             #DONT NEED THIS ANYMORE
-      # 
-      # for(gameid in list_of_all_gameids){
-      #   if(gameid %!in% df1$id){
-      #     missing_ids_df = rbind(missing_ids_df, data.frame(year = year, id = gameid, cos_sim = NA))
-      #   }
-      # }
-      # 
-      # current_cos_sim_df = rbind(current_cos_sim_df, missing_ids_df)
-      
-      
-      
-      print(sprintf("appending: %s obs.",nrow(current_cos_sim_df)))
-
-    }
-    
-    # IF EITHER THE CURRENT YEAR OR THE PREVIOUS YEAR IS EMPTY DO THIS
-    
-    if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) <= 4 |
-       file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) <= 4 |
-       file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-2)) <= 4){
-      
-      print(sprintf("empty: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
-      
-      current_cos_sim_df = data.frame(year = year, id = 999999, cos_sim = NA)
-      
-    }
-    
-    full_cos_sim_df = rbind(full_cos_sim_df, current_cos_sim_df)
-    
-    
-  }
-
-  full_cos_sim_df_2yr = full_cos_sim_df
-  # write.csv(full_cos_sim_df_2yr, "simlilarities_2yr_action_adventure_wordtype_all_pct_full_mc_allscore.csv", row.names = F) 
-  
-
-  
-  ################################################################################
-  # MERGE THE TWO TOGETHER
-  
-  together_full_cos_sim_df = merge(full_cos_sim_df_1yr, full_cos_sim_df_2yr, by=c("year","id"), all = T)
-  colnames(together_full_cos_sim_df) = c("year","id","sim_prev1yr","sim_prev2yr")
-  
-  # write.csv(together_full_cos_sim_df, "simlilarities_1yr_and_2yr_action_adventure_wordtype_all_pct_full_mc_allscore.csv", row.names = F)
-  
-  final_cos_sim_df = rbind(final_cos_sim_df, together_full_cos_sim_df)
-  
-} 
-
-
-################################################################################
-# WRITE THE RESULT TO FILE
-
-
-final_cos_sim_df = final_cos_sim_df[, c("id", "sim_prev1yr", "sim_prev2yr")]
-
-final_cos_sim_df = final_cos_sim_df[final_cos_sim_df$id != "999999",]
-
-not_in_final = vector()
-
-for(i in all_ids){
-  if(as.integer(i) %!in% final_cos_sim_df$id){
-    not_in_final = c(not_in_final,i)
   }
 }
-
-for(j in not_in_final){
-  temp_df = data.frame(id = as.numeric(j), sim_prev1yr = NA, sim_prev2yr = NA)
-  final_cos_sim_df = rbind(final_cos_sim_df, temp_df)
-}
-
-write.csv(final_cos_sim_df, "sim_scores.csv", row.names = F)
 
 library(beepr)
 beep(4)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# for (fil in list.files("C:/Users/gaoan/Desktop/step8/matrices")){
+#   print(fil)
+#   print(file.size(fil))
+# 
+# }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 
+# 
+# 
+# # rm(list=ls())
+# # setwd("C:/Users/gaoan/Desktop/step8/subset_wordtype_all_pct_full_mc_allscore")
+# setwd(sprintf("C:/Users/gaoan/Desktop/step8/subset_%s", current_dir))
+# 
+# '%!in%' <- Negate('%in%')
+# 
+# list_of_all_gameids = all_ids
+# 
+# list_of_genres = c("action adventure","action","role-playing","puzzle",
+#                    "racing","miscellaneous","simulation","adventure",
+#                    "sports","strategy")
+# 
+# # list_of_genres = c("action")
+# 
+# list_of_years = rev(as.numeric(c("2005","2006","2007","2008","2009","2010","2011","2012","2013","2014")))
+# 
+# final_cos_sim_df = data.frame()
+# 
+# ###### ADD FOR LOOP HERE TO GO THROUGH GENRES 1 BY 1
+# for(current_genre in list_of_genres){
+#   
+#   ################################################################################
+#   # CREATE DF OF SIMILARITY SCORES FOR ALL GAME IN SUBSET BASED ON PREV. 1 YEAR PROTOTYPE
+#   
+#   full_cos_sim_df = data.frame()
+#   
+#   for (year in list_of_years[1:(length(list_of_years)-1)]){
+#     
+#     # CHECK IF CURRENT YEAR OR PREVIOUS YEAR IS EMPTY
+#     
+#     if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) > 4 &
+#        file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) > 4){
+#     
+#       print(sprintf("calculating 1yr: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
+#       
+#       
+#       # CURRENTLY YOURE CALCULATING THE SCORES FOR ONLY THE SAME GAMES AS THE PROTOTYPE
+#       # PROTOTYPE IS BASED ON PARTICULAR COMBO OF: genre/yr/wordtype/frequency/score
+#       # BUT THEN YOU NEED TO CALCULATE COS SIM FOR ALL GAMES FOR EACH genre/yr/wordtype COMBOS, DESPITE THEIR frequency/score
+#       
+#       
+#       
+#       df1 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))              
+#       df2 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1))
+#       
+#       # print(sprintf("df1: %s obs.",nrow(df1)))
+#       
+#       #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
+#       colnames(df1)[1] = "id"
+#       df1$id = as.character(df1$id)
+#       
+#       colnames(df2)[1] = "id"
+#       df2$id = as.character(df2$id)
+#       
+#       ################################################################################
+#       # CALCULATE AVERAGES FOR PROTOTYPE
+#       df2 = rbind(df2, c("Total",colSums(df2[,2:ncol(df2)])))
+#       
+#       library(dplyr)
+#       df2[,2:ncol(df2)] <- mutate_all(df2[,2:ncol(df2)], function(x) as.numeric(as.character(x)))
+#       
+#       df2 = rbind(df2, c("avg", colSums(df2[,2:ncol(df2)]) / (nrow(df2) - 1)))                    # IS THIS RIGHT????
+#       
+#       df2 = df2[-c(nrow(df2)-1),]
+#       
+#       rownames(df2) <- NULL
+#       
+#       # df1 = rbind(df1, as.data.frame(df2[nrow(df2),1:ncol(df2)]))
+#       
+#       #####################################################
+#       # CALCULATE COSINE SIMILARITY
+#       
+#       library(lsa)
+#       
+#       rownames(df1) = df1$id
+#       
+#       prototype = as.numeric(df2[nrow(df2), 2:ncol(df2)])
+#       
+#       cosine_vals = vector()
+#       
+#       for(i in 1:nrow(df1)){
+#         # print(i)
+#         v1 = as.numeric(df1[i,2:ncol(df1)])
+#         c_mat = cosine(v1, prototype)
+#         cosine_vals = c(cosine_vals, (c_mat[1]))
+#       }
+#       
+#       current_cos_sim_df = data.frame(year = year, id = df1$id, cos_sim = cosine_vals)
+#     
+#       # missing_ids_df = data.frame()                                              #DONT NEED THIS ANYMORE
+#       # 
+#       # list_of_all_gameids[1] %!in% df1$id
+#       #   
+#       # for(gameid in list_of_all_gameids){
+#       #   if(gameid %!in% df1$id){
+#       #     missing_ids_df = rbind(missing_ids_df, data.frame(year = year, id = gameid, cos_sim = NA))
+#       #   }
+#       # }
+#       # 
+#       # current_cos_sim_df = rbind(current_cos_sim_df, missing_ids_df)
+#     
+#       print(sprintf("appending: %s obs.",nrow(current_cos_sim_df)))
+#       
+#     }
+#   
+#     # IF EITHER THE CURRENT YEAR OR THE PREVIOUS YEAR IS EMPTY DO THIS
+#     
+#     if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) <= 4 |
+#        file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) <= 4){
+#     
+#       print(sprintf("empty: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
+#       
+#       current_cos_sim_df = data.frame(year = year, id = 999999, cos_sim = NA)
+#   
+#     }
+#   
+#     
+#     full_cos_sim_df = rbind(full_cos_sim_df, current_cos_sim_df)
+# 
+#   }
+#   
+#   full_cos_sim_df_1yr = full_cos_sim_df
+#   # write.csv(full_cos_sim_df_1yr, "simlilarities_1yr_action_adventure_wordtype_all_pct_full_mc_allscore.csv", row.names = F)
+#   
+#   
+#   ################################################################################
+#   
+#   ################################################################################
+#   # CREATE DF OF SIMILARITY SCORES FOR ALL GAME IN SUBSET BASED ON PREV. 2 YEARs PROTOTYPE
+#   
+#   full_cos_sim_df = data.frame()
+#   
+# 
+#   
+#   for (year in list_of_years[1:(length(list_of_years)-2)]){
+#     
+#     # CHECK IF CURRENT YEAR OR EITHER OF 2 PREVIOUS YEARs ARE EMPTY
+#     
+#     if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) > 4 &
+#        file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) > 4 &
+#        file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-2)) > 4){
+#       
+#       print(sprintf("calculating 2yrs: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
+#       
+#       df1 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
+#       
+#       print(sprintf("df1: %s obs.",nrow(df1)))
+#       
+#       yr_minus_1 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1))
+#       yr_minus_2 = read.csv(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-2))
+#        
+#       df2 = rbind(yr_minus_1, yr_minus_2)
+#       # df2 = df2[!duplicated(df2),]
+#       
+#       #NOT SURE HOW TO LABEL THE ROWNAMES COLUMN WHEN WRITING CSV SO ID COLUMN IS BLANK ("X" WHEN READ)
+#       colnames(df1)[1] = "id"
+#       df1$id = as.character(df1$id)
+#       
+#       colnames(df2)[1] = "id"
+#       df2$id = as.character(df2$id)
+#       
+#       ################################################################################
+#       # CALCULATE AVERAGES FOR PROTOTYPE
+#       
+#       df2 = rbind(df2, c("Total",colSums(df2[,2:ncol(df2)])))
+#       
+#       library(dplyr)
+#       df2[,2:ncol(df2)] <- mutate_all(df2[,2:ncol(df2)], function(x) as.numeric(as.character(x)))
+#       
+#       df2 = rbind(df2, c("avg", colSums(df2[,2:ncol(df2)]) / (nrow(df2) - 1)))                    # IS THIS RIGHT????
+#       
+#       df2 = df2[-c(nrow(df2)-1),]
+#       
+#       rownames(df2) <- NULL
+#       
+#       # df1 = rbind(df1, as.data.frame(df2[nrow(df2),1:ncol(df2)]))
+#       
+#       #####################################################
+#       # CALCULATE COSINE SIMILARITY
+#       
+#       library(lsa)
+#       
+#       rownames(df1) = df1$id
+#       
+#       prototype = as.numeric(df2[nrow(df2), 2:ncol(df2)])
+#       
+#       cosine_vals = vector()                                                    # length(prototype)
+#       
+#       for(i in 1:nrow(df1)){
+#         # print(i)
+#         v1 = as.numeric(df1[i,2:ncol(df1)])    
+#         c_mat = cosine(v1, prototype)                                            #   length(v1)
+#         cosine_vals = c(cosine_vals, (c_mat[1]))
+#       }
+#       
+#       current_cos_sim_df = data.frame(year = year, id = df1$id, cos_sim = cosine_vals)
+#       
+#       # missing_ids_df = data.frame()                                             #DONT NEED THIS ANYMORE
+#       # 
+#       # for(gameid in list_of_all_gameids){
+#       #   if(gameid %!in% df1$id){
+#       #     missing_ids_df = rbind(missing_ids_df, data.frame(year = year, id = gameid, cos_sim = NA))
+#       #   }
+#       # }
+#       # 
+#       # current_cos_sim_df = rbind(current_cos_sim_df, missing_ids_df)
+#       
+#       
+#       
+#       print(sprintf("appending: %s obs.",nrow(current_cos_sim_df)))
+# 
+#     }
+#     
+#     # IF EITHER THE CURRENT YEAR OR THE PREVIOUS YEAR IS EMPTY DO THIS
+#     
+#     if(file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year)) <= 4 |
+#        file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-1)) <= 4 |
+#        file.size(sprintf("%s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year-2)) <= 4){
+#       
+#       print(sprintf("empty: %s_%s_%s.csv", sub(" ", "_", current_genre), current_dir, year))
+#       
+#       current_cos_sim_df = data.frame(year = year, id = 999999, cos_sim = NA)
+#       
+#     }
+#     
+#     full_cos_sim_df = rbind(full_cos_sim_df, current_cos_sim_df)
+#     
+#     
+#   }
+# 
+#   full_cos_sim_df_2yr = full_cos_sim_df
+#   # write.csv(full_cos_sim_df_2yr, "simlilarities_2yr_action_adventure_wordtype_all_pct_full_mc_allscore.csv", row.names = F) 
+#   
+# 
+#   
+#   ################################################################################
+#   # MERGE THE TWO TOGETHER
+#   
+#   together_full_cos_sim_df = merge(full_cos_sim_df_1yr, full_cos_sim_df_2yr, by=c("year","id"), all = T)
+#   colnames(together_full_cos_sim_df) = c("year","id","sim_prev1yr","sim_prev2yr")
+#   
+#   # write.csv(together_full_cos_sim_df, "simlilarities_1yr_and_2yr_action_adventure_wordtype_all_pct_full_mc_allscore.csv", row.names = F)
+#   
+#   final_cos_sim_df = rbind(final_cos_sim_df, together_full_cos_sim_df)
+#   
+# } 
+# 
+# 
+# ################################################################################
+# # WRITE THE RESULT TO FILE
+# 
+# 
+# final_cos_sim_df = final_cos_sim_df[, c("id", "sim_prev1yr", "sim_prev2yr")]
+# 
+# final_cos_sim_df = final_cos_sim_df[final_cos_sim_df$id != "999999",]
+# 
+# not_in_final = vector()
+# 
+# for(i in all_ids){
+#   if(as.integer(i) %!in% final_cos_sim_df$id){
+#     not_in_final = c(not_in_final,i)
+#   }
+# }
+# 
+# for(j in not_in_final){
+#   temp_df = data.frame(id = as.numeric(j), sim_prev1yr = NA, sim_prev2yr = NA)
+#   final_cos_sim_df = rbind(final_cos_sim_df, temp_df)
+# }
+# 
+# write.csv(final_cos_sim_df, "sim_scores.csv", row.names = F)
+# 
+# library(beepr)
+# beep(4)
+# 
+# 
 
 
 

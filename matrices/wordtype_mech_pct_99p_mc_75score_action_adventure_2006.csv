@@ -1,7 +1,7 @@
-"","adventure","move_special_move","explore","agile_athletic","solve","threat","smart_clever_wit","steal_theft","power_control_rule","fight","hunt","search","survive","change_transform_evolve","quest","combat","kill","battle","build_construct","confront","ride","attack"
+"","move_special_move","adventure","explore","agile_athletic","solve","threat","steal_theft","smart_clever_wit","power_control_rule","fight","hunt","search","survive","change_transform_evolve","quest","combat","kill","battle","build_construct","confront","ride","attack"
 "926821",1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 "928235",0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0
 "928326",0,0,1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0
-"928519",0,1,0,0,0,0,1,0,0,0,1,1,0,1,1,1,0,0,0,0,0,0
+"928519",1,0,0,0,0,0,0,1,0,0,1,1,0,1,1,1,0,0,0,0,0,0
 "932470",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0
-"932914",0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1
+"932914",1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1

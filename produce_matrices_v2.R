@@ -7,6 +7,8 @@ word_type_options = c("wordtype_all", "wordtype_wm", "wordtype_world",
 word_freq_options = c("pct_full", "pct_99p", "pct_95p")
 avg_score_options = c("mc_allscore", "mc_90score", "mc_75score")
 
+df$genre_wide[df$genre_wide == "action adventure"] = "action_adventure"         # filename needs and underscore not space
+
 wide_genre_options = unique(df$genre_wide)
 year_options = unique(df$release_year)
 
@@ -58,3 +60,6 @@ for(type in word_type_options){
     }
   }
 }
+
+library(beepr)
+beep(4)
